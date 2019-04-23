@@ -1,0 +1,78 @@
+#include "msp430.h"                     ; #define controlled include file
+
+        NAME    main                    ; module name
+
+        PUBLIC  main                    ; make the main label vissible
+                                        ; outside this module
+        ORG     0FFFEh
+        DC16    init                    ; set reset vector to 'init' label
+
+        RSEG    CSTACK                  ; pre-declaration of segment
+        RSEG    CODE                    ; place program in 'CODE' segment
+
+init:   MOV     #SFE(CSTACK), SP        ; set up stack
+
+main:   NOP                             ; main program
+        MOV.W   #WDTPW+WDTHOLD,&WDTCTL  ; Stop watchdog timer
+        BIC.B  #BIT1+BIT2+BIT5+BIT6, &P1OUT    ; turn off all lights
+        BIS.B  #BIT1+BIT2+BIT5, &P1DIR           
+       ; BIS.B #8, SR
+
+MainLoop:
+
+        ;bit.b   #BIT3,&P1IN        ; read switch at P1.3
+        ;JNZ     Off                 ; if P1.3 open branch to Off label
+        ;JEQ     O
+
+On:
+        BIC.B   #BIT2, &P1OUT           ; turn off YLED
+        BIC.B   #BIT5, P1OUT            ; turn off GLED
+        BIS.B   #BIT1, &P1OUT           ; turn on RLED
+       
+Wait1:  MOV.W   #5,R15               ; load R15 with value for delay
+L       DEC.W   R15                      ; decrement R15
+        JNZ     L                   ; if R15 is not zero jump to L1
+
+        BIC.B   #BIT1, &P1OUT           ; turn off RLED
+        BIS.B   #BIT5, &P1OUT           ; turn on GLED
+
+Wait2:  MOV.W   #5,R15               ; load R15 with value for delay
+L2      DEC.W   R15                      ; decrement R15
+        JNZ     L2                      ; if R15 is not zero jump to L1
+
+        BIC.B   #BIT5, &P1OUT           ; turn off GLED
+        BIS.B   #BIT2, &P1OUT           ; turn on YLED
+        
+Wait3:  MOV.W   #2,R15               ; load R15 with value for delay
+L3      DEC.W   R15                      ; decrement R15
+        JNZ     L3                      ; if R15 is not zero jump to L1
+        JMP     MainLoop                ; Endless loop
+        
+Off:
+        BIC.B   #BIT0+ BIT1+BIT2+BIT5+BIT6, &P1OUT    ; turn off all lights
+
+        JMP MainLoop                           ; jump to current location '$'
+                                        ; (endless loop)
+       
+;Wait1:      
+           ; PUSH R15
+            ;mov.w   #5,R15               ; load R15 with value for delay
+;L          dec.w   R15                      ; decrement R15
+ ;          jnz     L                   ; if R15 is not zero jump to L1
+            ;POP R15
+;          RET
+;          JMP     $
+            ;jmp     MainLoop                ; jump to the Mainloop label
+
+;------------------------------------------------------------------------------
+;           Interrupt Vectors
+;------------------------------------------------------------------------------
+        COMMON  INTVEC                  ; Interrupt Vectors
+        ORG     RESET_VECTOR            ; MSP430 RESET
+Vector:
+        
+        ORG     PORT1_VECTOR            ; P1.x Vector
+        DW      main                  ;
+        JMP $                           ; jump to current location '$'
+        
+       END
